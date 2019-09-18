@@ -6,6 +6,7 @@
   "dependencies": {
     "bulma": "^0.7.5",
     "core-js": "^2.6.5",
+    "javascript-barcode-reader": "^0.4.24",
     "jimp": "^0.8.2",
     "vue": "^2.6.10"
   },
@@ -31,8 +32,8 @@
     },
     "root": true,
     "rules": {
-      "semi": 2,
-      "no-console": 0
+      "no-console": 0,
+      "semi": 0
     }
   },
   "name": "image-filters",
