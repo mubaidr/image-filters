@@ -1,14 +1,16 @@
 <template>
   <div>
-    <h1 class="title is-1">Median Filter</h1>
+    <!-- <h1 class="title is-1">Median Filter</!-->
 
-    <input type="file" @change="readImages" />
+    <input type="file" @change="readImages" class="input" />
 
     <br />
 
     <img :src="originalImg" />
     <br />
     <img :src="modifiedImg" />
+    <br />
+    <canvas ref="canvas" :width="canvasWidth" :height="canvasHeight"></canvas>
 
     <br />
 
@@ -32,15 +34,18 @@
 
     <strong>{{ barcode }}</strong>
 
-    <br />
+    <!-- <br />
 
-    {{ $data }}
+    {{ $data }} -->
   </div>
 </template>
 
 <script>
 const Jimp = require("jimp")
 const jbr = require("javascript-barcode-reader")
+
+/* type {CanvasRenderingContext2d} */
+let context2D
 
 import Vue from "vue"
 export default Vue.extend({
@@ -51,7 +56,10 @@ export default Vue.extend({
       threshold: 127,
       originalImg: "",
       modifiedImg: "",
-      barcode: ""
+      barcode: "",
+      canvasHeight: 256,
+      canvasWidth: 256 * 10,
+      histogram: []
     }
   },
 
@@ -66,23 +74,54 @@ export default Vue.extend({
 
     y() {
       this.drawImages()
+    },
+
+    histogram() {
+      context2D.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+
+      const histo = this.histogram
+        .filter(val => val)
+        .sort((a, b) => {
+          return a - b
+        })
+      const max = histo[histo.length - 1]
+
+      this.histogram.forEach((count, index) => {
+        const scaled = (this.canvasHeight * count) / max
+
+        if (index === parseInt(this.threshold, 10)) {
+          context2D.fillStyle = "red"
+        }
+
+        context2D.fillRect(index * 3, this.canvasHeight - scaled, 2, scaled)
+
+        context2D.fillStyle = "black"
+      })
     }
   },
 
-  mounted() {},
+  mounted() {
+    context2D = this.$refs.canvas.getContext("2d")
+  },
 
   methods: {
     readImages(evt) {
       const file = evt.target.files[0]
 
       this.originalImg = URL.createObjectURL(file)
+      this.modifiedImg = this.originalImg
       this.drawImages()
     },
 
     drawImages() {
       let threshold = this.threshold
+      this.histogram = []
 
-      Jimp.read(this.originalImg, async (e, image) => {
+      Jimp.read(this.originalImg, (e, image) => {
+        const histogram = []
+
+        // apply threshold
+
         image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(
           x,
           y,
@@ -91,18 +130,26 @@ export default Vue.extend({
           let r = this.bitmap.data[idx + 0]
           let g = this.bitmap.data[idx + 1]
           let b = this.bitmap.data[idx + 2]
-          // let alpha = this.bitmap.data[idx + 3]
 
-          let v = 0.2126 * r + 0.7152 * g + 0.0722 * b
+          // let v = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b)
+          let v = (r + g + b) / 3
 
-          this.bitmap.data[idx + 0] = this.bitmap.data[
-            idx + 1
-          ] = this.bitmap.data[idx + 2] = v >= threshold ? 255 : 0
+          //create histogram
+          histogram[v] = (histogram[v] || 0) + 1
+
+          v = v >= threshold ? 255 : v
+
+          this.bitmap.data[idx + 0] = v
+          this.bitmap.data[idx + 1] = v
+          this.bitmap.data[idx + 2] = v
         })
 
+        this.histogram = histogram
+
+        // extract barcode
         jbr(
           {
-            data: image.bitmap.data,
+            data: [...image.bitmap.data],
             width: image.bitmap.width,
             height: image.bitmap.height
           },
@@ -113,9 +160,12 @@ export default Vue.extend({
           .then(barcode => {
             this.barcode = barcode
           })
-          .catch(err => console.error)
+          .catch(err => console.error(err))
 
-        this.modifiedImg = await image.getBase64Async(Jimp.MIME_PNG)
+        // update image preview
+        image.getBase64Async(Jimp.MIME_PNG).then(modifiedImg => {
+          this.modifiedImg = modifiedImg
+        })
       })
     }
   }
@@ -123,7 +173,8 @@ export default Vue.extend({
 </script>
 
 <style scoped>
-img {
+img,
+canvas {
   border: 1px solid red;
 }
 </style>
