@@ -5,15 +5,14 @@
 </template>
 
 <script>
-import Median from "./components/Median.vue"
+import Median from './components/Median.vue'
 
 export default {
-  name: "App",
+  name: 'App',
   components: {
     Median
   }
 }
 </script>
 
-<style>
-</style>
+<style></style>

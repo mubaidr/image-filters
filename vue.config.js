@@ -1,10 +1,10 @@
-const webpack = require("webpack")
+const webpack = require('webpack')
 
 module.exports = {
   configureWebpack: {
     plugins: [
       new webpack.DefinePlugin({
-        "process.browser": "true"
+        'process.browser': 'true'
       })
     ]
   }

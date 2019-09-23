@@ -2,7 +2,7 @@
   <div>
     <!-- <h1 class="title is-1">Median Filter</!-->
 
-    <input type="file" @change="readImages" class="input" />
+    <input type="file" class="input" @change="readImages" />
 
     <br />
 
@@ -10,25 +10,25 @@
     <br />
     <img :src="modifiedImg" />
     <br />
-    <canvas ref="canvas" :width="canvasWidth" :height="canvasHeight"></canvas>
+    <canvas ref="canvas" :width="canvasWidth" :height="canvasHeight" />
 
     <br />
 
     <div class="field is-grouped">
       <div class="control">
         <input
+          v-model="threshold"
           class="input"
           type="number"
           min="0"
           step="1"
-          v-model="threshold"
         />
       </div>
       <div class="control">
-        <input class="input" type="number" min="0" step="1" v-model="x" />
+        <input v-model="x" class="input" type="number" min="0" step="1" />
       </div>
       <div class="control">
-        <input class="input" type="number" min="0" step="1" v-model="y" />
+        <input v-model="y" class="input" type="number" min="0" step="1" />
       </div>
     </div>
 
@@ -41,22 +41,34 @@
 </template>
 
 <script>
-const Jimp = require("jimp")
-const jbr = require("javascript-barcode-reader")
+const Jimp = require('jimp')
+const jbr = require('javascript-barcode-reader')
+
+function getThreshold(histogram) {
+  const starting_threshold = 127
+  let lw = 0
+  let rw = 1
+
+  // while(lw !== rw){
+  //   lw =
+  // }
+
+  console.log(histogram, starting_threshold, lw, rw)
+}
 
 /* type {CanvasRenderingContext2d} */
 let context2D
 
-import Vue from "vue"
+import Vue from 'vue'
 export default Vue.extend({
   data() {
     return {
       x: 1,
       y: 0,
       threshold: 127,
-      originalImg: "",
-      modifiedImg: "",
-      barcode: "",
+      originalImg: '',
+      modifiedImg: '',
+      barcode: '',
       canvasHeight: 256,
       canvasWidth: 256 * 10,
       histogram: []
@@ -86,28 +98,33 @@ export default Vue.extend({
         })
       const max = histo[histo.length - 1]
 
+      // find optimal threshold
+      getThreshold(histo)
+
       this.histogram.forEach((count, index) => {
         const scaled = (this.canvasHeight * count) / max
 
         if (index === parseInt(this.threshold, 10)) {
-          context2D.fillStyle = "red"
+          context2D.fillStyle = 'red'
         }
 
         context2D.fillRect(index * 3, this.canvasHeight - scaled, 2, scaled)
 
-        context2D.fillStyle = "black"
+        context2D.fillStyle = 'black'
       })
     }
   },
 
   mounted() {
-    context2D = this.$refs.canvas.getContext("2d")
+    context2D = this.$refs.canvas.getContext('2d')
   },
 
   methods: {
     readImages(evt) {
-      const file = evt.target.files[0]
+      const { files } = evt.target
+      if (files.length === 0) return
 
+      const file = files[0]
       this.originalImg = URL.createObjectURL(file)
       this.modifiedImg = this.originalImg
       this.drawImages()
@@ -118,10 +135,9 @@ export default Vue.extend({
       this.histogram = []
 
       Jimp.read(this.originalImg, (e, image) => {
-        const histogram = []
+        const histogram = new Array(256).fill(0)
 
         // apply threshold
-
         image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(
           x,
           y,
@@ -135,7 +151,7 @@ export default Vue.extend({
           let v = (r + g + b) / 3
 
           //create histogram
-          histogram[v] = (histogram[v] || 0) + 1
+          histogram[v] += 1
 
           v = v >= threshold ? 255 : v
 
@@ -144,7 +160,9 @@ export default Vue.extend({
           this.bitmap.data[idx + 2] = v
         })
 
-        this.histogram = histogram
+        this.histogram = histogram.slice(0, 255).map(val => {
+          return val || 0
+        })
 
         // extract barcode
         jbr(
@@ -154,7 +172,7 @@ export default Vue.extend({
             height: image.bitmap.height
           },
           {
-            barcode: "code-128"
+            barcode: 'code-128'
           }
         )
           .then(barcode => {
