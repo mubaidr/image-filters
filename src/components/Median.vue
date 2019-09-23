@@ -79,11 +79,10 @@ export default Vue.extend({
     histogram() {
       context2D.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
 
-      const histo = this.histogram
-        .filter(val => val)
-        .sort((a, b) => {
-          return a - b
-        })
+      const histo = this.histogram.filter(val => val)
+      // .sort((a, b) => {
+      //   return a - b
+      // })
       const max = histo[histo.length - 1]
 
       this.histogram.forEach((count, index) => {
@@ -143,10 +142,6 @@ export default Vue.extend({
           this.bitmap.data[idx + 0] = v
           this.bitmap.data[idx + 1] = v
           this.bitmap.data[idx + 2] = v
-        })
-
-        this.histogram = histogram.slice(0, 255).map(val => {
-          return val || 0
         })
 
         //Parameters required to calculate threshold using OTSU Method
