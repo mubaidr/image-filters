@@ -47,6 +47,39 @@ const jbr = require('javascript-barcode-reader')
 /* type {CanvasRenderingContext2d} */
 let context2D
 
+function getOtsuThreshold(histogram, width, height) {
+  let prbn = 0.0 // First order cumulative
+  let meanitr = 0.0 // Second order cumulative
+  let meanglb = 0.0 // Global mean level
+  let OPT_THRESH_VAL = 0 // Optimum threshold value
+  let param1
+  let param2 // Parameters required to work out OTSU threshold algorithm
+  let param3 = 0.0
+  let hist_val = []
+
+  //Normalise histogram values and calculate global mean level
+  for (let i = 0; i < 256; i += 1) {
+    hist_val[i] = histogram[i] / (width * height)
+    meanglb += i * hist_val[i]
+  }
+
+  // Implementation of OTSU algorithm
+  for (let i = 0; i < 256; i += 1) {
+    prbn += hist_val[i]
+    meanitr += i * hist_val[i]
+
+    param1 = meanglb * prbn - meanitr
+    param2 = (param1 * param1) / (prbn * (1.0 - prbn))
+
+    if (param2 > param3) {
+      param3 = param2
+      OPT_THRESH_VAL = i // Update the "Weight/Value" as Optimum Threshold value
+    }
+  }
+
+  return OPT_THRESH_VAL
+}
+
 import Vue from 'vue'
 export default Vue.extend({
   data() {
@@ -137,45 +170,12 @@ export default Vue.extend({
           //create histogram
           histogram[v] += 1
 
-          v = v >= threshold ? 255 : v
+          v = v >= threshold ? 255 : 0
 
           this.bitmap.data[idx + 0] = v
           this.bitmap.data[idx + 1] = v
           this.bitmap.data[idx + 2] = v
         })
-
-        //Parameters required to calculate threshold using OTSU Method
-        let prbn = 0.0 // First order cumulative
-        let meanitr = 0.0 // Second order cumulative
-        let meanglb = 0.0 // Global mean level
-        let OPT_THRESH_VAL = 0 // Optimum threshold value
-        let param1
-        let param2 // Parameters required to work out OTSU threshold algorithm
-        let param3 = 0.0
-        let hist_val = []
-
-        //Normalise histogram values and calculate global mean level
-        for (let i = 0; i < 256; i += 1) {
-          hist_val[i] =
-            histogram[i] / (image.bitmap.width * image.bitmap.height)
-          meanglb += i * hist_val[i]
-        }
-
-        // Implementation of OTSU algorithm
-        for (let i = 0; i < 256; i += 1) {
-          prbn += hist_val[i]
-          meanitr += i * hist_val[i]
-
-          param1 = meanglb * prbn - meanitr
-          param2 = (param1 * param1) / (prbn * (1.0 - prbn))
-
-          if (param2 > param3) {
-            param3 = param2
-            OPT_THRESH_VAL = i // Update the "Weight/Value" as Optimum Threshold value
-          }
-        }
-
-        console.log(OPT_THRESH_VAL)
 
         // extract barcode
         jbr(
