@@ -44,18 +44,6 @@
 const Jimp = require('jimp')
 const jbr = require('javascript-barcode-reader')
 
-function getThreshold(histogram) {
-  const starting_threshold = 127
-  let lw = 0
-  let rw = 1
-
-  // while(lw !== rw){
-  //   lw =
-  // }
-
-  console.log(histogram, starting_threshold, lw, rw)
-}
-
 /* type {CanvasRenderingContext2d} */
 let context2D
 
@@ -97,9 +85,6 @@ export default Vue.extend({
           return a - b
         })
       const max = histo[histo.length - 1]
-
-      // find optimal threshold
-      getThreshold(histo)
 
       this.histogram.forEach((count, index) => {
         const scaled = (this.canvasHeight * count) / max
@@ -163,6 +148,39 @@ export default Vue.extend({
         this.histogram = histogram.slice(0, 255).map(val => {
           return val || 0
         })
+
+        //Parameters required to calculate threshold using OTSU Method
+        let prbn = 0.0 // First order cumulative
+        let meanitr = 0.0 // Second order cumulative
+        let meanglb = 0.0 // Global mean level
+        let OPT_THRESH_VAL = 0 // Optimum threshold value
+        let param1
+        let param2 // Parameters required to work out OTSU threshold algorithm
+        let param3 = 0.0
+        let hist_val = []
+
+        //Normalise histogram values and calculate global mean level
+        for (let i = 0; i < 256; i += 1) {
+          hist_val[i] =
+            histogram[i] / (image.bitmap.width * image.bitmap.height)
+          meanglb += i * hist_val[i]
+        }
+
+        // Implementation of OTSU algorithm
+        for (let i = 0; i < 256; i += 1) {
+          prbn += hist_val[i]
+          meanitr += i * hist_val[i]
+
+          param1 = meanglb * prbn - meanitr
+          param2 = (param1 * param1) / (prbn * (1.0 - prbn))
+
+          if (param2 > param3) {
+            param3 = param2
+            OPT_THRESH_VAL = i // Update the "Weight/Value" as Optimum Threshold value
+          }
+        }
+
+        console.log(OPT_THRESH_VAL)
 
         // extract barcode
         jbr(
